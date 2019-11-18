@@ -1,0 +1,263 @@
+Project Flow:-
+===============
+Jenkins ( stages)
+Docker 
+Kubernetes
+
+CICD- 
+DOCKER WITH KUBERNETES
+AWS -8 services (ECS)
+
+Setup project:
+Technology 
+1. Setup java and maven home on machine. 
+2. Jenkins - Install and configure jenkins, 
+   reset the admin password.
+3. Install git in machine.
+4. Install docker on machine.
+4. Sonar-dashboard
+5. jfrog artificatory
+6. Docker with Kubernetes
+
+Take m5.large ubuntu instance ( 2 core cpu & 8 GBi RAM) for setting up jenkins on Ec2.
+Take volume of 30GB.
+
+## Step 1. Install java on Linux machine 
+$ sudo -i 
+$ apt-get update
+$ apt-get install -y openjdk-8-jdk              
+ 
+## Verified java version
+ubuntu@ip-172-31-10-173:~$ java -version
+java version "1.8.0_171"
+Java(TM) SE Runtime Environment (build 1.8.0_171-b11)
+Java HotSpot(TM) 64-Bit Server VM (build 25.171-b11, mixed mode)
+
+## Step 2. Download and configure Maven 
+
+ $ cd /usr/local/src
+ $ wget http://www-us.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
+ $ tar -xf apache-maven-3.5.4-bin.tar.gz
+ $ mv apache-maven-3.5.4/ apache-maven/
+ $ rm -rf apache-maven-3.5.4-bin.tar.gz
+
+Each of these contain a bin/java
+
+To find the full path of the symbolic link use:
+
+readlink -f $(which java)
+
+ ## Configure Apache-Maven Environment
+ 
+ Go to the '/etc/profile.d' directory
+ and create a new configuration file 'maven.sh'.
+ 
+ $ cd /etc/profile.d/
+ $ vim maven.sh
+Add below lines
+ # Apache Maven Environment Variables
+ # MAVEN_HOME for Maven 1 - M2_HOME for Maven 2
+ export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ export M2_HOME=/usr/local/src/apache-maven
+ export PATH=${M2_HOME}/bin:${PATH}
+ ESC+ :wq
+ ## Save the file and make it executable.
+ 
+ $chmod +x maven.sh
+
+Run the File:
+
+ $ source maven.sh
+ 
+ ## Verify the maven version
+ 
+  mvn --version
+
+   cd ~ to go to the home directory
+  
+ Step 3.  Installing Jenkins in Linux Ec2 instance ###
+  
+  Add the repository key to the system. 
+  
+-- Add jenkins repository
+  $ wget -q -O - https://pkg.jenkins.io/debian/jenkins-ci.org.key | sudo apt-key add -
+                             
+  -- Adding the jenkins repo to repo source.list file
+  echo deb https://pkg.jenkins.io/debian-stable binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list
+          
+   -- Update the system
+  apt-get update  
+  -- Now install jenkns 
+  apt-get install jenkins -y  
+  
+  ## Now start jenkins ## 
+ 
+  ## service jenkins start ( stop | status)
+
+  service jenkins status
+  ctrl+c
+  # service jenkins start
+
+## Now access jenkins through IP and Port in browser. 
+  
+  http://ec2-52-221-235-166.ap-southeast-1.compute.amazonaws.com:8080/ 
+  
+  Now put the admin password , 
+  
+  cat /var/lib/jenkins/secrets/initialAdminPassword 
+
+ copy the password and paste it on jenkins for first time. 
+  
+  ## Now install the suggested plug-in -- > 
+     Install suggested plugins.
+	 Enter admin username, password,full name, Email-address.
+	 
+     Save and Finish 
+	 Jenkins is ready now.
+  
+ ### Install docker on machine and add to jenkins to docker group ###
+  
+   $ apt-get install docker.io -y
+   $ service docker status
+  Adding user to docker group & need to restart the service:
+  usermod -aG docker jenkins --> 
+   service docker stop
+   service docker start
+
+##  Run docker container for jfrog ##
+=======================================
+ Jfrog is Enterprise Universal Repository Manager.
+
+ root@ip-172-31-10-173:~# 
+docker run --name artifactory -d -p 8081:8081 docker.bintray.io/jfrog/artifactory-pro:latest
+ 
+ $ docker ps
+Add 8081 to security group.
+
+### Install sonarqube ###
+===========================
+
+Continuous Code Quality
+
+SonarQube provides the capability to not only show health of an application but also to highlight issues newly introduced. With a Quality Gate in place, you can fix the leak and therefore improve code quality systematically.
+
+ -- This command will run sonarqube in docker container
+
+SonarQube is an open source product for 
+continuous inspection of code quality.
+
+ $ docker run -d --name sonarqube -p 9000:9000 -p 9092:9092 sonarqube     
+                                       
+ $ docker ps
+
+To access Sonar:
+----------------
+Login into port 9000 of ec2 machine:
+user: admin
+passwd: admin
+
+
+To access Artifactory:
+-----------------------
+ Allow port 8081 in your SG of Ec2 mahicne. 
+ 
+ # Access your instance on browser with port 8081,
+ Register for free trial. 
+ # Copy  your key for free trail and paste it to register.
+ # add password for jfrog repository. 
+ passwd: admin
+ user name is admin.
+ create a Generic Repository by clicking on generic.
+ click finish.
+
+  
+
+	 
+ ###optional: cd /var/log/jenkins
+   cat jenkins.log-> to see installed plugins### 
+  
+ Install Git on machine 
+ =======================.
+  
+  apt-get install git-core
+ 
+
+Go to Jenkins Page-
+Manage Jenkins-->
+Goto Global Tool COnfiguration:
+-------------------------------
+Add JDK --> JDK name and add Java Home.
+JDK name= JAVA_HOME
+JAVA_HOME=/usr/lib/jvm/java-8-oracle
+ 
+Add maven--> Maven Home 
+M2_HOME
+/usr/local/src/apache-maven
+Save the file.
+
+Install the Plugin:
+-------------------
+Add the plugins required for your projects.
+
+Deploy to container plugin.
+Goto Manage Plugins
+search for Deploy to container
+Select Install without restart.
+Jenkins restart:
+service jenkins stop
+service jenkins start
+
+Creating a JOB:
+---------------
+Enter New item--
+select pipeline project: projectdemo
+click ok.
+Description-- This is jenkins pipeline project.
+
+Preparing groovy scripts into Pipeline terminals
+ in Build Triggers column.
+
+Update the IP of sonar and Artifact in groovy scripts.
+
+$ docker inspect sonarid- To find the Ip of sonar= 172.17.0.1
+$ docker inspect jfrog- To find the Ip of jfrog.172.17.0.2
+Github url to be added.
+add code to the github.
+
+Update the Workspace name in groovy script file.
+
+copy and add to pipeline script.
+Click Build Now.
+While building, add parameters as v1.
+Jenkins restart:
+service jenkins stop
+service jenkins start.
+
+how to create a pipeline project.
+Syntaxes:-
+==========
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+  
+
+ 
